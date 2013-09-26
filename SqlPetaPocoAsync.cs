@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This project is a modification fo the single file PetaPoco.cs. All references to other
  * databases have been removed.
  * 
@@ -71,56 +71,14 @@ namespace SqlPetaPocoAsync
 		/// Construct a database using a supplied connections string and optionally a provider name
 		/// </summary>
 		/// <param name="connectionString">The DB connection string</param>
-		/// <param name="providerName">The name of the DB provider to use</param>
 		/// <remarks>
 		/// SqlPetaPocoAsync will automatically close and dispose any connections it creates.
 		/// </remarks>
-		public Database(string connectionString, string providerName)
+		public Database(string connectionString)
 		{
 			_connectionString = connectionString;
-			_providerName = providerName;
-			CommonConstruct();
-		}
-
-		/// <summary>
-		/// Construct a Database using a supplied connection string and a DbProviderFactory
-		/// </summary>
-		/// <param name="connectionString">The connection string to use</param>
-		/// <param name="provider">The DbProviderFactory to use for instantiating SqlConnection's</param>
-		public Database(string connectionString, DbProviderFactory provider)
-		{
-			_connectionString = connectionString;
-			_factory = SqlClientFactory.Instance;
-			CommonConstruct();
-		}
-
-		/// <summary>
-		/// Construct a Database using a supplied connectionString Name.  The actual connection string and provider will be 
-		/// read from app/web.config.
-		/// </summary>
-		/// <param name="connectionStringName">The name of the connection</param>
-		public Database(string connectionStringName)
-		{
-			// Use first?
-			if (connectionStringName == "")
-				connectionStringName = ConfigurationManager.ConnectionStrings[0].Name;
-
-			// Work out connection string and provider name
-			var providerName = "System.Data.SqlClient";
-			if (ConfigurationManager.ConnectionStrings[connectionStringName] != null)
-			{
-				if (!string.IsNullOrEmpty(ConfigurationManager.ConnectionStrings[connectionStringName].ProviderName))
-					providerName = ConfigurationManager.ConnectionStrings[connectionStringName].ProviderName;
-			}
-			else
-			{
-				throw new InvalidOperationException("Can't find a connection string with the name '" + connectionStringName + "'");
-			}
-
-			// Store factory and connection string
-			_connectionString = ConfigurationManager.ConnectionStrings[connectionStringName].ConnectionString;
-			_providerName = providerName;
-			CommonConstruct();
+            _factory = SqlClientFactory.Instance;
+            CommonConstruct();
 		}
 
 		/// <summary>
@@ -2235,7 +2193,7 @@ namespace SqlPetaPocoAsync
 		// Member variables
 		internal DatabaseType _dbType;
 		string _connectionString;
-		string _providerName;
+        string _providerName = "System.Data.SqlClient";
         SqlClientFactory _factory;
 		SqlConnection _sharedConnection;
 		SqlTransaction _transaction;
