@@ -32,8 +32,8 @@
 #define PETAPOCO_NO_DYNAMIC
 
 
-using SqlPetaPocoAsync.DatabaseTypes;
-using SqlPetaPocoAsync.Internal;
+using PetaPoco.DatabaseTypes;
+using PetaPoco.Internal;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -49,7 +49,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SqlPetaPocoAsync
+namespace PetaPoco
 {
     /// <summary>
     /// The main SqlPetaPocoAsync Database class.  You can either use this class directly, or derive from it.
@@ -223,18 +223,20 @@ namespace SqlPetaPocoAsync
         /// </summary>
         /// <returns>An ITransaction reference that must be Completed or disposed</returns>
         /// <remarks>
-        /// This method makes management of calls to Begin/End/CompleteTransaction easier.  
-        /// 
         /// The usage pattern for this should be:
         /// 
         /// using (var tx = db.GetTransaction())
         /// {
+        ///     tx.Begin();
+        ///     
         ///		// Do stuff
         ///		db.Update(...);
         ///		
         ///     // Mark the transaction as complete
         ///     tx.Complete();
         /// }
+        /// 
+        /// You need to call Begin (or BeginAsync)!!!
         /// 
         /// Transactions can be nested but they must all be completed otherwise the entire
         /// transaction is aborted.
@@ -515,8 +517,19 @@ namespace SqlPetaPocoAsync
         /// Called on completion of command execution
         /// </summary>
         /// <param name="cmd">The SqlCommand that finished executing</param>
+        /// 
         public virtual void OnExecutedCommand(SqlCommand cmd)
         {
+            if (ActionOnExecutedCommand != null)
+            {
+                ActionOnExecutedCommand(cmd);
+            }
+        }
+
+        public Action<SqlCommand> ActionOnExecutedCommand
+        {
+            get;
+            set;
         }
 
         #endregion
@@ -1768,11 +1781,11 @@ namespace SqlPetaPocoAsync
 
 
                         object id = _dbType.ExecuteInsert(this, cmd, primaryKeyName);
-
-
                         // Assign the ID back to the primary key property
                         if (primaryKeyName != null)
                         {
+                            long longid = Convert.ToInt64(id);
+
                             PocoColumn pc;
                             if (pd.Columns.TryGetValue(primaryKeyName, out pc))
                             {
@@ -1904,7 +1917,7 @@ namespace SqlPetaPocoAsync
                         }
 
 
-                        object id = await _dbType.ExecuteInsert(this, cmd, primaryKeyName);
+                        object id = await _dbType.ExecuteInsertAsync(this, cmd, primaryKeyName);
 
 
                         // Assign the ID back to the primary key property
@@ -4514,7 +4527,16 @@ namespace SqlPetaPocoAsync
         public Transaction(Database db)
         {
             _db = db;
-            _db.BeginTransactionAsync().Wait();
+        }
+
+        public void Begin()
+        {
+            _db.BeginTransaction();
+        }
+
+        public async Task BeginAsync()
+        {
+            await _db.BeginTransactionAsync();
         }
 
         public void Complete()
@@ -4648,10 +4670,17 @@ namespace SqlPetaPocoAsync
             /// <param name="cmd">The insert command to be executed</param>
             /// <param name="PrimaryKeyName">The primary key of the table being inserted into</param>
             /// <returns>The ID of the newly inserted record</returns>
-            public virtual async Task<object> ExecuteInsert(Database db, SqlCommand cmd, string PrimaryKeyName)
+            public virtual async Task<object> ExecuteInsertAsync(Database db, SqlCommand cmd, string PrimaryKeyName)
             {
                 cmd.CommandText += ";\nSELECT @@IDENTITY AS NewID;";
                 var result = await db.ExecuteScalarHelperAsync(cmd);
+                return result;
+            }
+
+            public virtual object ExecuteInsert(Database db, SqlCommand cmd, string PrimaryKeyName)
+            {
+                cmd.CommandText += ";\nSELECT @@IDENTITY AS NewID;";
+                var result = db.ExecuteScalarHelper(cmd);
                 return result;
             }
 
@@ -5513,9 +5542,15 @@ namespace SqlPetaPocoAsync
                 return sqlPage;
             }
 
-            public override async Task<object> ExecuteInsert(Database db, SqlCommand cmd, string PrimaryKeyName)
+            public override async Task<object> ExecuteInsertAsync(Database db, SqlCommand cmd, string PrimaryKeyName)
             {
                 var result = await db.ExecuteScalarHelperAsync(cmd);
+                return result;
+            }
+
+            public override object ExecuteInsert(Database db, SqlCommand cmd, string PrimaryKeyName)
+            {
+                var result = db.ExecuteScalarHelper(cmd);
                 return result;
             }
 
